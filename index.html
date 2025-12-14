@@ -2,6 +2,8 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Code Runner MVP</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5/lib/codemirror.css">
@@ -13,31 +15,38 @@
   <style>
     body {
       font-family: sans-serif;
-      padding: 15px;
+      padding: 12px;
       background: #1e1e1e;
       color: #ddd;
+      font-size: 18px;
     }
 
     h2 {
-      margin-top: 0;
       color: #fff;
+      font-size: 22px;
+      margin-bottom: 10px;
     }
 
     #editor {
-      border: 1px solid #444;
       height: 300px;
+      border: 1px solid #444;
+    }
+
+    .CodeMirror {
+      height: 100%;
+      font-size: 18px; 
     }
 
     #run {
-      margin-top: 10px;
-      padding: 10px 15px;
-      font-size: 16px;
-      cursor: pointer;
-
+      width: 100%;
+      margin-top: 12px;
+      padding: 14px 20px;
+      font-size: 20px;
       background: #3c3c3c;
       border: 1px solid #555;
       color: #fff;
-      border-radius: 6px;
+      border-radius: 8px;
+      cursor: pointer;
     }
 
     #run:hover {
@@ -47,18 +56,21 @@
     #output {
       background: #121212;
       color: #0f0;
-      padding: 10px;
+      padding: 14px;
       margin-top: 20px;
       white-space: pre-wrap;
-      min-height: 80px;
+      min-height: 100px;
       border-radius: 6px;
       border: 1px solid #333;
+      font-size: 18px;
+      line-height: 1.6;
     }
   </style>
 </head>
+
 <body>
 
-<h2>Python Interpreter MVP</h2>
+<h2>Python Interpreter</h2>
 
 <div id="editor"></div>
 <button id="run">▶ Выполнить</button>
@@ -71,20 +83,46 @@
     theme: "darcula",
     lineNumbers: true,
     indentUnit: 4,
-    value: "print('Hello from Telegram WebApp!')"
+    value: "print('Hello world!')"
   });
 
   document.getElementById("run").onclick = async () => {
     const code = editor.getValue();
+    const output = document.getElementById("output");
 
-    const response = await fetch("https://api.extendsclass.com/exec/python/3.10", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: code })
-    });
+    output.innerText = "⏳ Отправляю код...";
 
-    const data = await response.json();
-    document.getElementById("output").innerText = data.stdout || data.stderr;
+    const urlParams = new URLSearchParams(window.location.search);
+    const section_id = parseInt(urlParams.get("sid"));
+    const telegram_id = parseInt(urlParams.get("tid"));
+    const message_id = parseInt(urlParams.get("mid"));
+
+    try {
+      const resp = await fetch("/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: code,
+          section_id: section_id,
+          telegram_id: telegram_id,
+          message_id: message_id
+        })
+      });
+
+      const data = await resp.json();
+      console.log("Ответ сервера:", data);
+      output.innerText = JSON.stringify(data, null, 2);
+
+      if(data.status === "ok"){
+        output.innerText = "✔ Результат отправлен в Telegram!";
+      } else {
+        output.innerText = "⚠️ Что-то пошло не так";
+      }
+
+    } catch (err) {
+      output.innerText = "🚫 Ошибка запроса к серверу";
+      console.error(err);
+    }
   };
 </script>
 
